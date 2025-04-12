@@ -1,0 +1,37 @@
+syntax = "proto3";
+package IM;
+import "base.proto";
+
+option cc_generic_services = true;
+
+//这个用于和网关进行通信
+message NewMessageReq 
+{
+    string request_id = 1;  //请求ID -- 全链路唯一标识
+    optional string user_id = 2;
+    optional string session_id = 3;//客户端身份识别信息 -- 这就是消息发送者
+    string chat_session_id = 4;  //聊天会话ID -- 标识了当前消息属于哪个会话，应该转发给谁
+    MessageContent message = 5; // 消息内容--消息类型+内容
+}
+
+message NewMessageRsp 
+{
+    string request_id = 1;
+    bool success = 2;
+    string errmsg = 3; 
+}
+
+//这个用于内部的通信,生成完整的消息信息，并获取消息的转发人员列表
+message GetTransmitTargetRsp 
+{
+    string request_id = 1;
+    bool success = 2;
+    string errmsg = 3; 
+    MessageInfo message = 4; // 组织好的消息结构 -- 
+    repeated string target_id_list = 5; //消息的转发目标列表
+}
+
+service MsgTransmitService
+{
+    rpc GetTransmitTarget(NewMessageReq) returns (GetTransmitTargetRsp);
+}

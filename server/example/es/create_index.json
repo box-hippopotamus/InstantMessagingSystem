@@ -1,0 +1,34 @@
+{
+    "settings": {
+      "analysis": {
+        "analyzer": {
+          "ik": {
+            "tokenizer": "ik_max_word"  // 使用 IK 分词器的 ik_max_word 模式进行中文分词
+          }
+        }
+      }
+    },
+    "mappings": {
+      "dynamic": true,  // 允许动态映射，自动推断新字段的类型
+      "properties": {
+        "nickname": {
+          "type": "text",  // 昵称字段，类型为文本
+          "analyzer": "ik_max_word"  // 使用 IK 分词器的 ik_max_word 模式进行分词, 默认使用standard分词
+        },
+        "user_id": {
+          "type": "keyword"  // 用户ID字段，类型为关键字，适合精确匹配
+        },
+        "phone": {
+          "type": "keyword"  // 电话号码字段，类型为关键字，适合精确匹配
+        },
+        "description": {
+          "type": "text",  // 描述字段，类型为文本
+          "index": false  // 禁用索引，该字段不会被搜索或查询
+        },
+        "avatar_id": {
+          "type": "keyword",  // 头像ID字段，类型为关键字，适合精确匹配
+          "index": false  // 禁用索引，该字段不会被搜索或查询
+        }
+      }
+    }
+  }

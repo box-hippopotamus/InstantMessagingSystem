@@ -1,0 +1,22 @@
+syntax = "proto3";
+package IM.Proto;
+
+option cc_generic_services = true;
+
+message SpeechRecognitionReq {
+    string request_id = 1;
+    bytes speech_content = 2;
+    optional string user_id = 3;
+    optional string session_id = 4;
+}
+
+message SpeechRecognitionRsp {
+    string request_id = 1;
+    bool success = 2;
+    string errmsg = 3; 
+    string recognition_result = 4;
+}
+
+service SpeechService {
+    rpc SpeechRecognition(SpeechRecognitionReq) returns (SpeechRecognitionRsp);
+}

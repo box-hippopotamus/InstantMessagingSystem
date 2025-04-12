@@ -1,0 +1,32 @@
+{
+    "settings": {
+      "analysis": {
+        "analyzer": {
+          "ik": {
+            "tokenizer": "ik_max_word"
+          }
+        }
+      }
+    },
+    "mappings": {
+      "dynamic": true,
+      "properties": {
+        "chat_session_id": {
+          "type": "keyword"
+        },
+        "message_id": {
+          "type": "keyword"
+        },
+        "user_id": {
+          "type": "keyword"
+        },
+        "create_time": {
+          "type": "long"
+        },
+        "content": {
+          "type": "text",
+          "analyzer": "ik_max_word"
+        }
+      }
+    }
+  }

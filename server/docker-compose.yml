@@ -1,0 +1,286 @@
+version: "3.8"
+
+services:
+  etcd:
+    image: quay.io/coreos/etcd:v3.3.25
+    container_name: etcd-service
+    environment:
+      - ETCD_NAME=etcd-s1
+      - ETCD_DATA_DIR=/var/lib/etcd
+      - ETCD_LISTEN_CLIENT_URLS=http://0.0.0.0:2379
+      - ETCD_ADVERTISE_CLIENT_URLS=http://0.0.0.0:2379
+    volumes:
+      - ./middle/data/etcd:/var/lib/etcd:rw
+    ports:
+      - 2379:2379
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 2379 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+
+  mysql:
+    image: mysql:8.0.39
+    container_name: mysql-service
+    environment:
+      MYSQL_ROOT_PASSWORD: 123456
+    volumes:
+      - ./sql/my.cnf:/etc/mysql/conf.d/my.cnf:ro
+      - ./sql:/docker-entrypoint-initdb.d/:rw
+      - ./middle/data/mysql:/var/lib/mysql:rw
+    ports:
+      - 3306:3306
+    restart: always
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  redis:
+    image: redis:6.0.16
+    container_name: redis-service
+    volumes:
+      - ./middle/data/redis:/var/lib/redis:rw
+    ports:
+      - 6379:6379
+    restart: always
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 20s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+
+  elasticsearch:
+    image: elasticsearch:7.17.28
+    container_name: elasticsearch-service
+    environment:
+      - "discovery.type=single-node"
+    volumes:
+      - ./middle/data/elasticsearch:/data:rw
+    ports:
+      - 9200:9200
+      - 9300:9300
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "curl --silent --fail localhost:9200/_cluster/health || exit 1"]
+      interval: 30s
+      timeout: 15s
+      retries: 5
+      start_period: 60s
+    # 启动时自动安装 IK 分词器
+    command: >
+      bash -c "
+        if [ ! -d /usr/share/elasticsearch/plugins/analysis-ik ]; then
+          echo 'Installing IK Analyzer...';
+          bin/elasticsearch-plugin install --batch https://github.com/medcl/elasticsearch-analysis-ik/releases/download/v7.17.28/elasticsearch-analysis-ik-7.17.28.zip;
+        fi;
+        /usr/local/bin/docker-entrypoint.sh
+      "
+      
+  rabbitmq:
+    image: rabbitmq:3.9.13
+    container_name: rabbitmq-service
+    environment:
+      RABBITMQ_DEFAULT_USER: root
+      RABBITMQ_DEFAULT_PASS: 123456
+    volumes:
+      - ./middle/data/rabbitmq:/var/lib/rabbitmq:rw
+    ports:
+      - 5672:5672
+      - 15672:15672
+    restart: always
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  file_server:
+    build: ./file
+    container_name: file_server-service
+    volumes:
+      - ./conf/file_server.conf:/im/conf/file_server.conf
+      - ./middle/data/logs:/im/logs:rw
+      - ./middle/data/data:/im/data:rw
+      - ./entrypoint.sh:/im/bin/entrypoint.sh
+    ports:
+      - 9002:9002
+    restart: always
+    entrypoint:
+      - /im/bin/entrypoint.sh
+      - -h
+      - 192.168.229.129
+      - -p
+      - "2379"
+      - -c
+      - "/im/bin/file_server -flagfile=/im/conf/file_server.conf"
+    depends_on:
+      etcd:
+        condition: service_healthy
+
+  friend_server:
+    build: ./friend
+    container_name: friend_server-service
+    volumes:
+      - ./conf/friend_server.conf:/im/conf/friend_server.conf
+      - ./middle/data/logs:/im/logs:rw
+      - ./middle/data/data:/im/data:rw
+      - ./entrypoint.sh:/im/bin/entrypoint.sh
+    ports:
+      - 9007:9007
+    restart: always
+    depends_on:
+      etcd:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+    entrypoint:
+      - /im/bin/entrypoint.sh
+      - -h
+      - 192.168.229.129
+      - -p
+      - "2379,3306,9200"
+      - -c
+      - "/im/bin/friend_server -flagfile=/im/conf/friend_server.conf"
+
+  gateway_server:
+    build: ./gateway
+    container_name: gateway_server-service
+    volumes:
+      - ./conf/gateway_server.conf:/im/conf/gateway_server.conf
+      - ./middle/data/logs:/im/logs:rw
+      - ./middle/data/data:/im/data:rw
+      - ./entrypoint.sh:/im/bin/entrypoint.sh
+    ports:
+      - "9000:9000" 
+      - "9001:9001"
+    restart: always
+    depends_on:
+      etcd:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    entrypoint:
+      - /im/bin/entrypoint.sh
+      - -h
+      - 192.168.229.129
+      - -p
+      - "2379,6379"
+      - -c
+      - "/im/bin/gateway_server -flagfile=/im/conf/gateway_server.conf"
+
+  message_server:
+    build: ./message
+    container_name: message_server-service
+    volumes:
+      - ./conf/message_server.conf:/im/conf/message_server.conf
+      - ./middle/data/logs:/im/logs:rw
+      - ./middle/data/data:/im/data:rw
+      - ./entrypoint.sh:/im/bin/entrypoint.sh
+    ports:
+      - 9006:9006
+    restart: always
+    depends_on:
+      etcd:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    entrypoint:
+      - /im/bin/entrypoint.sh
+      - -h
+      - 192.168.229.129
+      - -p
+      - "2379,3306,9200,5672"
+      - -c
+      - "/im/bin/message_server -flagfile=/im/conf/message_server.conf"
+
+  speech_server:
+    build: ./speech
+    container_name: speech_server-service
+    volumes:
+      - ./conf/speech_server.conf:/im/conf/speech_server.conf
+      - ./middle/data/logs:/im/logs:rw
+      - ./middle/data/data:/im/data:rw
+      - ./entrypoint.sh:/im/bin/entrypoint.sh
+    ports:
+      - 9003:9003
+    restart: always
+    depends_on:
+      etcd:
+        condition: service_healthy
+    entrypoint:
+      - /im/bin/entrypoint.sh
+      - -h
+      - 192.168.229.129
+      - -p
+      - "2379"
+      - -c
+      - "/im/bin/speech_server -flagfile=/im/conf/speech_server.conf"
+
+  transmit_server:
+    build: ./transmit
+    container_name: transmit_server-service
+    volumes:
+      - ./conf/transmit_server.conf:/im/conf/transmit_server.conf
+      - ./middle/data/logs:/im/logs:rw
+      - ./middle/data/data:/im/data:rw
+      - ./entrypoint.sh:/im/bin/entrypoint.sh
+    ports:
+      - 9005:9005
+    restart: always
+    depends_on:
+      etcd:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    entrypoint:
+      - /im/bin/entrypoint.sh
+      - -h
+      - 192.168.229.129
+      - -p
+      - "2379,3306,5672"
+      - -c
+      - "/im/bin/transmit_server -flagfile=/im/conf/transmit_server.conf"
+
+  user_server:
+    build: ./user
+    container_name: user_server-service
+    volumes:
+      - ./conf/user_server.conf:/im/conf/user_server.conf
+      - ./middle/data/logs:/im/logs:rw
+      - ./middle/data/data:/im/data:rw
+      - ./entrypoint.sh:/im/bin/entrypoint.sh
+    ports:
+      - 9004:9004
+    restart: always
+    depends_on:
+      etcd:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+    entrypoint:
+      - /im/bin/entrypoint.sh
+      - -h
+      - 192.168.229.129
+      - -p
+      - "2379,3306,5672,9200"
+      - -c
+      - "/im/bin/user_server -flagfile=/im/conf/user_server.conf"

@@ -1,0 +1,34 @@
+{
+    "query": {
+      "bool": {
+        "must_not": [
+          {
+            "terms": {
+              "user_id.keyword": [
+                "USER4b862aaa-2df8654a-7eb4bb65-e3507f66",
+                "USER14eeeaa5-442771b9-0262e455-e4663d1d",
+                "USER484a6734-03a124f0-996c169dd05c1869"
+              ]
+            }
+          }
+        ],
+        "should": [
+          {
+            "match": {
+              "user_id": "昵称"
+            }
+          },
+          {
+            "match": {
+              "nickname": "昵称"
+            }
+          },
+          {
+            "match": {
+              "phone": "昵称"
+            }
+          }
+        ]
+      }
+    }
+  }

@@ -1,0 +1,23 @@
+FROM ubuntu:24.04
+
+WORKDIR /im
+
+# 创建所需目录
+RUN mkdir -p /im/logs /im/data /im/conf /im/bin /im/lib
+
+# 拷贝CA证书（假设宿主机上的路径是./source/cacert.pem）
+COPY ./source/cacert.pem /im/certs/
+
+# 拷贝程序
+COPY ./build/user_server /im/bin/
+
+# 拷贝依赖库到非系统位置
+COPY ./depends/ /im/lib/
+
+# 拷贝 nc 工具
+COPY ./nc /bin/
+
+# 设置运行时动态库查找路径
+ENV LD_LIBRARY_PATH=/im/lib
+
+CMD ["/im/bin/user_server", "-flagfile=/im/conf/user_server.conf"]

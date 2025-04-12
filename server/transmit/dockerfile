@@ -1,0 +1,20 @@
+FROM ubuntu:24.04
+
+WORKDIR /im
+
+# 创建所需目录
+RUN mkdir -p /im/logs /im/data /im/conf /im/bin /im/lib
+
+# 拷贝程序
+COPY ./build/transmit_server /im/bin/
+
+# 拷贝依赖库到非系统位置
+COPY ./depends/ /im/lib/
+
+# 拷贝 nc 工具
+COPY ./nc /bin/
+
+# 设置运行时动态库查找路径
+ENV LD_LIBRARY_PATH=/im/lib
+
+CMD ["/im/bin/transmit_server", "-flagfile=/im/conf/transmit_server.conf"]
