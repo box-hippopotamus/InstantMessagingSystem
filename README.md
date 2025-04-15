@@ -122,6 +122,9 @@ server/
 ```
 
 ### 编译说明
+所有编译好的镜像已经上传阿里云仓库，不用本地编译直接通过docker拉取，可以直接跑服务端，可见下一个标题“部署说明”。
+
+如果你修改了代码，那么你就需要自己重新编译了。
 
 #### 环境要求
 - Ubuntu 24.04 或更高版本
@@ -144,6 +147,20 @@ cd build
 cmake ..
 make
 ```
+
+3. docker一键部署
+修改代码，并且经过上述步骤重新编译了，此时`docker-compose.yml`也需要进行一定修改。
+
+以 `file_server` 为例，你需要注释掉远程镜像源，改用本地 `build`。
+
+```yml
+build: ./file # 取消注释这一行
+# image: registry.cn-hangzhou.aliyuncs.com/instantmessaging/chat_im:file-v1  # 注释这一行
+```
+
+包括其它的服务也需要这么做。
+
+
 ### 部署说明
 
 1. 配置文件
@@ -155,6 +172,8 @@ make
 ```bash
 docker-compose up -d
 ```
+
+备注: 虽然我开启了健康检查，保证容器之间启动的时序问题，但是偶尔还是会有部分容器之间无法互相链接的问题，此时建议对目标容器单独进行 `docker restart` 重启，而不是 `docker-compose down`，因为使用同样的方法重启，依然无法解决时序问题。
 
 ### 数据持久化
 所有服务的数据都通过Docker卷进行持久化存储：
