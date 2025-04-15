@@ -81,7 +81,7 @@ services:
         fi;
         /usr/local/bin/docker-entrypoint.sh
       "
-      
+
   rabbitmq:
     image: rabbitmq:3.9.13
     container_name: rabbitmq-service
@@ -102,7 +102,8 @@ services:
       start_period: 30s
 
   file_server:
-    build: ./file
+    # build: ./file
+    image: registry.cn-hangzhou.aliyuncs.com/instantmessaging/chat_im:file-v1  # 使用阿里云镜像
     container_name: file_server-service
     volumes:
       - ./conf/file_server.conf:/im/conf/file_server.conf
@@ -125,7 +126,8 @@ services:
         condition: service_healthy
 
   friend_server:
-    build: ./friend
+    # build: ./friend
+    image: registry.cn-hangzhou.aliyuncs.com/instantmessaging/chat_im:friend-v1  # 使用阿里云镜像
     container_name: friend_server-service
     volumes:
       - ./conf/friend_server.conf:/im/conf/friend_server.conf
@@ -152,7 +154,8 @@ services:
       - "/im/bin/friend_server -flagfile=/im/conf/friend_server.conf"
 
   gateway_server:
-    build: ./gateway
+    # build: ./gateway
+    image: registry.cn-hangzhou.aliyuncs.com/instantmessaging/chat_im:gateway-v1  # 使用阿里云镜像
     container_name: gateway_server-service
     volumes:
       - ./conf/gateway_server.conf:/im/conf/gateway_server.conf
@@ -178,7 +181,8 @@ services:
       - "/im/bin/gateway_server -flagfile=/im/conf/gateway_server.conf"
 
   message_server:
-    build: ./message
+    # build: ./message
+    image: registry.cn-hangzhou.aliyuncs.com/instantmessaging/chat_im:message-v1  # 使用阿里云镜像
     container_name: message_server-service
     volumes:
       - ./conf/message_server.conf:/im/conf/message_server.conf
@@ -207,7 +211,8 @@ services:
       - "/im/bin/message_server -flagfile=/im/conf/message_server.conf"
 
   speech_server:
-    build: ./speech
+    # build: ./speech
+    image: registry.cn-hangzhou.aliyuncs.com/instantmessaging/chat_im:speech-v1  # 使用阿里云镜像
     container_name: speech_server-service
     volumes:
       - ./conf/speech_server.conf:/im/conf/speech_server.conf
@@ -230,7 +235,8 @@ services:
       - "/im/bin/speech_server -flagfile=/im/conf/speech_server.conf"
 
   transmit_server:
-    build: ./transmit
+    # build: ./transmit
+    image: registry.cn-hangzhou.aliyuncs.com/instantmessaging/chat_im:transmit-v1  # 使用阿里云镜像
     container_name: transmit_server-service
     volumes:
       - ./conf/transmit_server.conf:/im/conf/transmit_server.conf
@@ -257,7 +263,8 @@ services:
       - "/im/bin/transmit_server -flagfile=/im/conf/transmit_server.conf"
 
   user_server:
-    build: ./user
+    # build: ./user
+    image: registry.cn-hangzhou.aliyuncs.com/instantmessaging/chat_im:user-v1  # 使用阿里云镜像
     container_name: user_server-service
     volumes:
       - ./conf/user_server.conf:/im/conf/user_server.conf
